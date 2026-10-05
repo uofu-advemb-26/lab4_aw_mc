@@ -10,8 +10,20 @@ void signal_handle_calculation(SemaphoreHandle_t request,
                                SemaphoreHandle_t response,
                                 struct signal_data *data)
     {
-    
-        // compute something then give semaphore
+        
+        struct signal_data *args = data;
+
+        if (xSemaphoreTake(request, portMAX_DELAY) == pdTRUE) {
+            // if we receive the request, we compute the output, then give the response semaphore
+            args->output = args->input + (int32_t) 5;
+            // compute something then give semaphore
+            xSemaphoreGive(response);
+        }
+        // NEED TO REASON about how to successfully give response
+        // try to take response (wait) then give request
+        xSemaphoreTake(response);
+        xSemaphoreGive(request);
+        
     }
 // This function requests the data
 BaseType_t signal_request_calculate(SemaphoreHandle_t request,
@@ -19,4 +31,11 @@ BaseType_t signal_request_calculate(SemaphoreHandle_t request,
                                     struct signal_data *data)
     {
         // take semaphore first, then do something with data
+        xSemaphoreGive(request);
+
+        BaseType_t result = xSemaphoreTake(response, portMAX_DELAY);
+        // need to give result for initial state
+        xSemaphoreGive(response);
+        // wait for request
+        xSemaphoreTake(request);
     }
