@@ -17,12 +17,19 @@ void signal_handle_calculation(SemaphoreHandle_t request,
             // if we receive the request, we compute the output, then give the response semaphore
             args->output = args->input + (int32_t) 5;
             // compute something then give semaphore
-            xSemaphoreGive(response);
+            xSemaphoreGive(response); 
+
+            // NEED TO WAIT FOR ACKNOWLEDGE that response has been taken by requester successfully
         }
         // NEED TO REASON about how to successfully give response
         // try to take response (wait) then give request
+
+        if (xSemaphoreTake(ack) == pdTRUE){
+            xSemaphoreGive(request);
+        }
         xSemaphoreTake(response);
-        xSemaphoreGive(request);
+
+        xSemaphoreGive(ack);
         
     }
 // This function requests the data
@@ -30,12 +37,19 @@ BaseType_t signal_request_calculate(SemaphoreHandle_t request,
                                     SemaphoreHandle_t response,
                                     struct signal_data *data)
     {
+        // TAKE ACK (other semaphotre - symbol that system is ready)
+        xSemaphoreTake(ack);
         // take semaphore first, then do something with data
         xSemaphoreGive(request);
 
         BaseType_t result = xSemaphoreTake(response, portMAX_DELAY);
         // need to give result for initial state
-        xSemaphoreGive(response);
+
+        // GIVE ACK
+        xSemaphoreGive(ack);
+
         // wait for request
         xSemaphoreTake(request);
+        xSemaphoreGive(response);
+        
     }
