@@ -18,6 +18,7 @@ struct task_args
 {
     SemaphoreHandle_t request;
     SemaphoreHandle_t response;
+    SemaphoreHandle_t ack;
     struct signal_data *data;
 };
 
@@ -27,6 +28,7 @@ void calc_task(void *vargs)
     while(1) {
         signal_handle_calculation(args->request,
                                   args->response,
+                                  args->ack,
                                   args->data);
     }
     vTaskDelete(NULL);
@@ -37,14 +39,15 @@ void test_request(void)
     TaskHandle_t coop_thread;
     SemaphoreHandle_t request = xSemaphoreCreateCounting(1, 0);
     SemaphoreHandle_t response = xSemaphoreCreateCounting(1, 0);
+    SemaphoreHandle_t ack   =  xSemaphoreCreateCounting(1,1);
 
     struct signal_data data = {};
-    struct task_args args = {request, response, &data};
+    struct task_args args = {request, response, ack, &data};
     xTaskCreate(calc_task, "test_request", TEST_TASK_STACK_SIZE,
                 (void *)&args, TEST_TASK_PRIORITY, &coop_thread);
     for (int counter = 46; counter < 55; counter++) {
         data.input = counter;
-        BaseType_t result = signal_request_calculate(request, response, &data);
+        BaseType_t result = signal_request_calculate(request, response, ack, &data);
         TEST_ASSERT_EQUAL_INT(pdTRUE, result);
         TEST_ASSERT_EQUAL_INT(counter+5, data.output);
 	}
@@ -57,9 +60,10 @@ void test_noone_home(void)
 {
     SemaphoreHandle_t response = xSemaphoreCreateCounting(1, 0);
     SemaphoreHandle_t request = xSemaphoreCreateCounting(1, 0);
+    SemaphoreHandle_t ack   = xSemaphoreCreateCounting(1,1);
     struct signal_data data = {42, 42};
-    struct task_args args = {request, response, &data};
-    BaseType_t result = signal_request_calculate(request, response, &data);
+    struct task_args args = {request, response, ack, &data};
+    BaseType_t result = signal_request_calculate(request, response, ack, &data);
     TEST_ASSERT_EQUAL_INT(pdFALSE, result);
     TEST_ASSERT_EQUAL_INT(1, uxSemaphoreGetCount(request));
     TEST_ASSERT_EQUAL_INT(0, uxSemaphoreGetCount(response));
@@ -74,8 +78,9 @@ void test_noop(void)
     TaskHandle_t coop_thread;
     SemaphoreHandle_t request = xSemaphoreCreateCounting(1, 0);
     SemaphoreHandle_t response = xSemaphoreCreateCounting(1, 0);
+    SemaphoreHandle_t ack   = xSemaphoreCreateCounting(1,1);
     struct signal_data data = {42, 42};
-    struct task_args args = {request, response, &data};
+    struct task_args args = {request, response, ack, &data};
     xTaskCreate(calc_task, "test_noop", TEST_TASK_STACK_SIZE,
                 (void *)&args, TEST_TASK_PRIORITY, &coop_thread);
     vTaskDelay(1000);
@@ -94,8 +99,9 @@ void test_out_of_order(void)
     TaskHandle_t coop_thread;
     SemaphoreHandle_t request = xSemaphoreCreateCounting(1, 0);
     SemaphoreHandle_t response = xSemaphoreCreateCounting(1, 0);
+    SemaphoreHandle_t ack   = xSemaphoreCreateCounting(1,1);
     struct signal_data data = {42, 42};
-    struct task_args args = {request, response, &data};
+    struct task_args args = {request, response, ack, &data};
     xTaskCreate(calc_task, "test_out_of_order", TEST_TASK_STACK_SIZE,
                 (void *)&args, TEST_TASK_PRIORITY, &coop_thread);
     xSemaphoreGive(response);

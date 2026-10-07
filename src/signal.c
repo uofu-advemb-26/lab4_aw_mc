@@ -1,14 +1,11 @@
 #include "signaling.h"
 
-struct signal_data {
-    int32_t input;
-    int32_t output;
-};
 
 // This function creates the data that is wanted by the other function
 void signal_handle_calculation(SemaphoreHandle_t request,
                                SemaphoreHandle_t response,
-                                struct signal_data *data)
+                               SemaphoreHandle_t ack,
+                               struct signal_data *data)
     {
         
         struct signal_data *args = data;
@@ -24,10 +21,10 @@ void signal_handle_calculation(SemaphoreHandle_t request,
         // NEED TO REASON about how to successfully give response
         // try to take response (wait) then give request
 
-        if (xSemaphoreTake(ack) == pdTRUE){
+        if (xSemaphoreTake(ack, portMAX_DELAY) == pdTRUE){
             xSemaphoreGive(request);
         }
-        xSemaphoreTake(response);
+        xSemaphoreTake(response, portMAX_DELAY);
 
         xSemaphoreGive(ack);
         
@@ -35,10 +32,11 @@ void signal_handle_calculation(SemaphoreHandle_t request,
 // This function requests the data
 BaseType_t signal_request_calculate(SemaphoreHandle_t request,
                                     SemaphoreHandle_t response,
+                                    SemaphoreHandle_t ack,
                                     struct signal_data *data)
     {
         // TAKE ACK (other semaphotre - symbol that system is ready)
-        xSemaphoreTake(ack);
+        xSemaphoreTake(ack, portMAX_DELAY);
         // take semaphore first, then do something with data
         xSemaphoreGive(request);
 
@@ -49,7 +47,7 @@ BaseType_t signal_request_calculate(SemaphoreHandle_t request,
         xSemaphoreGive(ack);
 
         // wait for request
-        xSemaphoreTake(request);
+        xSemaphoreTake(request, portMAX_DELAY);
         xSemaphoreGive(response);
         
     }
