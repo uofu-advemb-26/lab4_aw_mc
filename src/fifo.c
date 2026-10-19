@@ -6,11 +6,13 @@
 
 void fifo_worker_handler(QueueHandle_t requests, QueueHandle_t results, int id)
 {
-    struct request_msg data;
-    xQueueReceive(requests, &data, portMAX_DELAY);
-    
-    data.output = data.input + 5;
-    data.handled_by = id;
+    while(1){
+        struct request_msg data;
+        xQueueReceive(requests, &data, portMAX_DELAY);
+        
+        data.output = data.input + 5;
+        data.handled_by = id;
 
-    xQueueSendToBack(results, &data, portMAX_DELAY);
+        xQueueSendToBack(results, &data, portMAX_DELAY);
+    }
 }
